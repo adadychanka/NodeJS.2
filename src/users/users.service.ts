@@ -1,51 +1,51 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { v4 as uuid } from 'uuid';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
-  private users: UpdateUserDto[] = [];
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
-  create(createUserDto: CreateUserDto) {
-    const user: UpdateUserDto = { ...createUserDto, id: uuid() };
+  create(createUserDto: CreateUserDto): Promise<User> {
+    const user = { ...createUserDto };
 
-    this.users.push(user);
+    const createdUser = this.userRepository.create(user);
+    return this.userRepository.save(createdUser);
+  }
+
+  async findAll(): Promise<User[]> {
+    const users = await this.userRepository.find();
+
+    return users;
+  }
+
+  async findOne(id: string) {
+    const user = await this.userRepository.find({
+      where: { id },
+    });
 
     return user;
   }
 
-  findAll() {
-    return this.users;
-  }
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const { id: userId, ...fieldsToUpdate } = updateUserDto;
 
-  findOne(id: string) {
-    return this.users.find((user) => user.id === id);
-  }
-
-  update(id: string, updateUserDto: UpdateUserDto) {
-    const indexOfUserToUpdate = this.users.findIndex((user) => user.id === id);
-
-    if (indexOfUserToUpdate === -1) {
-      return null;
-    }
-
-    const userToUpdate = this.users[indexOfUserToUpdate];
-    const updatedUser: UpdateUserDto = { ...userToUpdate, ...updateUserDto };
-
-    this.users.splice(indexOfUserToUpdate, 1, updatedUser);
+    await this.userRepository.update(id, fieldsToUpdate);
+    const updatedUser = await this.userRepository.findOne({ where: { id } });
 
     return updatedUser;
   }
 
-  remove(id: string) {
-    const userToRemove = this.users.find((user) => user.id === id);
+  async remove(id: string) {
+    const userToRemove = await this.userRepository.findOne({ where: { id } });
 
-    if (!userToRemove) {
-      return null;
-    }
-
-    this.users = this.users.filter((user) => user.id !== id);
+    await this.userRepository.delete(id);
 
     return userToRemove;
   }
