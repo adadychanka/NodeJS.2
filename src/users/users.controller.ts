@@ -6,10 +6,12 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserType } from './types';
 
 @Controller('users')
 export class UsersController {
@@ -23,6 +25,23 @@ export class UsersController {
   @Get()
   async findAll() {
     return await this.usersService.findAll();
+  }
+
+  @Get('search')
+  async search(
+    @Query('fullName') fullName: string,
+    @Query('minAge') minAge: number,
+    @Query('maxAge') maxAge: number,
+    @Query('type') type: string | UserType,
+  ) {
+    const query = {
+      fullName,
+      minAge,
+      maxAge,
+      type,
+    };
+
+    return await this.usersService.search(query);
   }
 
   @Get(':id')

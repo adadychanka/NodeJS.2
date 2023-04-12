@@ -1,9 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import {
+  And,
+  Equal,
+  FindOptionsWhere,
+  ILike,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
+import { UsersSearchQuery } from './types';
+import { isUserHasValidType } from './utils';
 
 @Injectable()
 export class UsersService {
@@ -20,7 +30,7 @@ export class UsersService {
   }
 
   async findAll(): Promise<User[]> {
-    const users = await this.userRepository.find();
+    const users = await this.userRepository.find({ take: 100 });
 
     return users;
   }
@@ -31,6 +41,57 @@ export class UsersService {
     });
 
     return user;
+  }
+
+  async search(query: UsersSearchQuery): Promise<User[]> {
+    const { fullName, minAge, maxAge, type } = query;
+
+    let findOption: FindOptionsWhere<User> = {};
+
+    if (fullName) {
+      findOption = {
+        ...findOption,
+        fullName: ILike(`${fullName}%`),
+      };
+    }
+
+    if (minAge) {
+      findOption = {
+        ...findOption,
+        age: MoreThanOrEqual(minAge),
+      };
+    }
+
+    if (maxAge) {
+      findOption = {
+        ...findOption,
+        age: LessThanOrEqual(maxAge),
+      };
+    }
+
+    if (minAge && maxAge) {
+      findOption = {
+        ...findOption,
+        age: And(MoreThanOrEqual(minAge), LessThanOrEqual(maxAge)),
+      };
+    }
+
+    if (type) {
+      if (!isUserHasValidType(type)) {
+        return [];
+      }
+
+      findOption = {
+        ...findOption,
+        type: Equal(type),
+      };
+    }
+
+    const users = await this.userRepository.find({
+      where: findOption,
+    });
+
+    return users;
   }
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {

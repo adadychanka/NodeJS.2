@@ -16,6 +16,10 @@ export class User {
   })
   fullName: string;
 
-  @Column()
+  @Column({
+    type: 'enum',
+    enum: UserType,
+    default: UserType.trainee,
+  })
   type: UserType;
 }
